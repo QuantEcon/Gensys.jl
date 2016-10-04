@@ -22,21 +22,15 @@ Returned system is
 ```
 y(t) = G1*y(t-1) + C + impact*z(t) + ywt*inv(I-fmat*inv(L))*fwt*z(t+1)
 ```
-Returned values are
+Returned value is a `GensysOutput` object containing the following values
 ```
-G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+G1, C, impact, fmat, fwt, ywt, gev, eu
 ```
+as well as the array `loose`.
 
 If `z(t)` is i.i.d., the last term drops out.
 
 If `div` is omitted from argument list, a `div`>1 is calculated.
-
-### Return codes
-
-* `eu[1]==1` for existence
-* `eu[2]==1` for uniqueness
-* `eu[1]==-1` for existence only with not-s.c. z;
-* `eu==[-2,-2]` for coincident zeros.
 
 ### Notes
 
@@ -65,8 +59,15 @@ function gensysdt(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
         if (abs(a[i, i]) < ϵ) && (abs(b[i, i]) < ϵ)
             info("Coincident zeros.  Indeterminacy and/or nonexistence.")
             eu = [-2, -2]
-            G1 = Array{Float64, 2}() ;  C = Array{Float64, 1}() ; impact = Array{Float64, 2}() ; fmat = Array{Complex{Float64}, 2}() ; fwt = Array{Complex{Float64}, 2}() ; ywt = Vector{Complex{Float64}}() ; gev = Vector{Complex{Float64}}() ; loose = Array{Float64, 2}()
-            return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+            G1 = Array{Float64, 2}()
+            C = Array{Float64, 1}()
+            impact = Array{Float64, 2}()
+            fmat = Array{Complex{Float64}, 2}()
+            fwt = Array{Complex{Float64}, 2}()
+            ywt = Vector{Complex{Float64}}()
+            gev = Vector{Complex{Float64}}()
+            loose = Array{Float64, 2}()
+            return GensysOutput(G1, C, impact, fmat, fwt, ywt, gev, eu), loose
         end
     end
 
@@ -153,7 +154,7 @@ function gensysdt(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     loose = real(z * loose)
     ywt = z * ywt
     
-    return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+    return GensysOutput(G1, C, impact, fmat, fwt, ywt, gev, eu), loose
 end
 
 
