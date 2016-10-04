@@ -1,7 +1,10 @@
 module Gensys
+
 include("gensysdt.jl")
 include("gensysct.jl")
-export gensysdt,
-gensysct
+include("types.jl")
+
+export gensysdt, gensysct, GensysOutput
+
 end
 

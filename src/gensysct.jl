@@ -22,30 +22,22 @@ Returned system is
 Dy(t) = G1*y(t) + C + impact * z(t)
 ```
 
-
-Returned values are
+Returned value is a `GensysOutput` object, containing the values
 ```
-G1, C, impact, qt', a, b, z, eu
+G1, C, impact, fmat', a, b, z, eu
 ```
 
-Also returned is the qz decomposition, qt'az' = Γ0, qt'bz' = Γ1, with a and b
-upper triangular and the system ordered so that all zeros on the diagonal of b are in
-the lower right corner, all cases where the real part of bii/aii is greater than or 
-equal to div appear in the next block above the zeros, and the remaining bii/aii's 
-all have bii/aii<div .  These elements can be used to construct the full backward and 
+Also returned is the qz decomposition, `fmat'az' = Γ0`, `fmat'bz' = Γ1`, with `a` and `b`
+upper triangular and the system ordered so that all zeros on the diagonal of `b` are in
+the lower right corner, all cases where the real part of `bii/aii` is greater than or 
+equal to `div` appear in the next block above the zeros, and the remaining `bii/aii`'s 
+all have `bii/aii<div`.  These elements can be used to construct the full backward and 
 forward solution.  See the paper \"Solving Linear Rational Expectations Models\", 
-http://eco-072399b.princeton.edu/yftp/gensys .  Note that if one simply wants the backwar
-and forward projection of y on eΨlon, ignoring existence and uniqueness questions, the
+http://eco-072399b.princeton.edu/yftp/gensys .  Note that if one simply wants the backwards
+and forwards projection of y on epsilon, ignoring existence and uniqueness questions, the
 projection can be computed by Fourier methods.
 
 If `div` is omitted from argument list, a `div`>1 is calculated.
-
-### Return codes
-
-* `eu[1]==1` for existence
-* `eu[2]==1` for uniqueness
-* `eu[1]==-1` for existence for white noise η
-* `eu==[-2,-2]` for coincident zeros.
 """
 
 
@@ -72,7 +64,7 @@ function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
             eu = [-2, -2]
             G1 = Array{Float64, 2}() ;  C = Array{Float64, 1}() ; impact = Array{Float64, 2}()
             a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
-            return G1, C, impact, qt', a, b, z, eu
+            return GensysOutput(G1, C, impact, qt', a, b, z, eu)
         end
     end
     movelast = Bool[(real(b[i, i] / a[i, i]) > div) || (abs(a[i, i]) < ϵ) for i in 1:n]
@@ -136,7 +128,8 @@ function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     G1 = real(G1)
     C = real(z * C)
     impact = real(z * impact)
-    return G1, C, impact, qt', a, b, z, eu
+
+    return GensysOutput(G1, C, impact, qt', a, b, z, eu)
 end
 
 
