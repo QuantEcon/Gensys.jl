@@ -1,4 +1,5 @@
-using Gensys, Base.Test
+using  Test
+include("../src/Gensys.jl")
 
 Γ0 = [-1.0 0.0 0.0 0.0 0.0 0.0
  0.0 -1.0 0.0 0.0 0.0 0.0
@@ -53,13 +54,13 @@ c = zeros(n, 1)
 
 
 
-G1, C, impact, q, a, b, z, eu = gensysct(Γ0, Γ1, c, Ψ, Π)
-@test_approx_eq_eps G1 G1_solution 1e-4
-@test_approx_eq_eps impact impact_solution 1e-4
-@test_approx_eq_eps eu eu_solution 1e-4
+G1, C, impact, q, a, b, z, eu = Gensys.gensysct(Γ0, Γ1, c, Ψ, Π)
+@test isapprox(G1, G1_solution, atol=1e-4)
+@test isapprox(impact, impact_solution, atol=1e-4)
+@test isapprox(eu, eu_solution, atol=1e-4)
 
-G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensysdt(Γ0, Γ1+Γ0, c, Ψ, Π)
-@test_approx_eq_eps impact impact_solution 1e-4
+G1, C, impact, fmat, fwt, ywt, gev, eu, loose = Gensys.gensysdt(Γ0, Γ1+Γ0, c, Ψ, Π)
+@test isapprox(impact, impact_solution, atol=1e-4)
 
 
 
@@ -491,9 +492,9 @@ G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensysdt(Γ0, Γ1+Γ0, c, Ψ, Π
   c = zeros(n)
 
  
- G1, C, impact, q, a, b, z, eu = gensysct(Γ0, Γ1, c, Ψ, Π)
+ G1, C, impact, q, a, b, z, eu = Gensys.gensysct(Γ0, Γ1, c, Ψ, Π)
  @show eu
- @test sumabs2(impact .- impact_solution) <= 1e-5
- @test sumabs2(G1 .- G1_solution) <= 1e-5
+ @test sum(abs2, (impact .- impact_solution)) <= 1e-5
+ @test sum(abs2, (G1 .- G1_solution)) <= 1e-5
 
 
