@@ -53,17 +53,17 @@ If `div` is omitted from argument list, a `div`>1 is calculated.
 const ϵ = sqrt(eps()) * 10
 
 function gensysct(Γ0, Γ1, c, Ψ, Π, args...)
-    F = schurfact!(complex(Γ0), complex(Γ1))
+    F = schur!(complex(Γ0), complex(Γ1))
     gensysct(F, c, Ψ, Π, args...)
 end
 
-function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π)
+function gensysct(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
     gensysct(F, c, Ψ, Π, new_divct(F))
 end
 
-function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
+function gensysct(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     eu = [0, 0]
-    a, b = F[:S], F[:T]
+    a, b = F.S, F.T
     n = size(a, 1)
     
     for i in 1:n
@@ -71,27 +71,27 @@ function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
             info("Coincident zeros.  Indeterminacy and/or nonexistence.")
             eu = [-2, -2]
             G1 = Array{Float64, 2}() ;  C = Array{Float64, 1}() ; impact = Array{Float64, 2}()
-            a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+            a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
             return G1, C, impact, qt', a, b, z, eu
         end
     end
     movelast = Bool[(real(b[i, i] / a[i, i]) > div) || (abs(a[i, i]) < ϵ) for i in 1:n]
     nunstab = sum(movelast)
-    FS = ordschur!(F, !movelast)
-    a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+    FS = ordschur!(F, .!movelast)
+    a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
 
     qt1 = qt[:, 1:(n - nunstab)]
     qt2 = qt[:, (n - nunstab + 1):n]
     a2 = a[(n - nunstab + 1):n, (n - nunstab + 1):n]
     b2 = b[(n - nunstab + 1):n, (n - nunstab + 1):n]
-    etawt = Ac_mul_B(qt2, Π)
+    etawt = qt2' * Π
     bigev, ueta, deta, veta = decomposition_svdct!(etawt)
-    zwt = Ac_mul_B(qt2, Ψ)
+    zwt = qt2' * Ψ
     bigev, uz, dz, vz = decomposition_svdct!(zwt)
     if isempty(bigev)
         exist = true
     else
-        exist = vecnorm(uz- A_mul_Bc(ueta, ueta) * uz, 2) < ϵ * n
+        exist = norm(uz- (ueta * ueta') * uz, 2) < ϵ * n
     end
     if isempty(bigev)
         existx = true
@@ -99,15 +99,15 @@ function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
         zwtx0 = b2 \ zwt
         zwtx = zwtx0
         M = b2 \ a2
-        M = scale!(M, 1 / norm(M))
+        M = M * 1 / norm(M)
         for i in 2:nunstab
             zwtx = hcat(M * zwtx, zwtx0)
         end
         zwtx = b2 * zwtx
         bigev, ux, dx, vx = decomposition_svdct!(zwtx)
-        existx = vecnorm(ux - A_mul_Bc(ueta, ueta) * ux, 2) < ϵ * n
+        existx = norm(ux - (ueta * ueta') * ux, 2) < ϵ * n
     end
-    etawt1 = Ac_mul_B(qt1, Π)
+    etawt1 = qt1' * Π
     bigev, ueta1, deta1, veta1 = decomposition_svdct!(etawt1)
     if existx | (nunstab == 0)
        eu[1] = 1
@@ -119,20 +119,20 @@ function gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     if isempty(veta1)
         unique = true
     else
-        unique = vecnorm(veta1- A_mul_Bc(veta, veta) * veta1, 2) < ϵ * n
+        unique = norm(veta1- (veta * veta') * veta1, 2) < ϵ * n
     end
     if unique
        eu[2] = 1
     end
 
-    tmat = hcat(eye(n - nunstab), -ueta1 * deta1 * Ac_mul_B(veta1, veta) * (deta \ ueta'))
-    G0 =  vcat(tmat * a, hcat(zeros(nunstab, n - nunstab), eye(nunstab)))
+    tmat = hcat(I(n - nunstab), -ueta1 * deta1 * (veta1' * veta) * (deta \ ueta'))
+    G0 =  vcat(tmat * a, hcat(zeros(nunstab, n - nunstab), I(nunstab)))
     G1 =  vcat(tmat * b, zeros(nunstab, n))
     G1 = G0 \ G1
     usix = (n - nunstab + 1):n
-    C = G0 \ vcat(tmat * Ac_mul_B(qt, c), (a[usix, usix] .- b[usix, usix]) \ Ac_mul_B(qt2, c))
-    impact = G0 \ vcat(tmat * Ac_mul_B(qt, Ψ), zeros(nunstab, size(Ψ, 2)))
-    G1 = z * A_mul_Bc(G1, z)
+    C = G0 \ vcat(tmat * (qt' * c), (a[usix, usix] .- b[usix, usix]) \ (qt2' * c))
+    impact = G0 \ vcat(tmat * (qt' * Ψ), zeros(nunstab, size(Ψ, 2)))
+    G1 = z * (G1 * z')
     G1 = real(G1)
     C = real(z * C)
     impact = real(z * impact)
@@ -141,8 +141,8 @@ end
 
 
 
-function new_divct(F::Base.LinAlg.GeneralizedSchur)
-    a, b = F[:S], F[:T]
+function new_divct(F::LinearAlgebra.GeneralizedSchur)
+    a, b = F.S, F.T
     n = size(a, 1)
     div = 0.001
     for i in 1:n
@@ -158,10 +158,10 @@ end
 
 
 function decomposition_svdct!(A)
-    Asvd = svdfact!(A)
-    bigev = find(Asvd[:S] .> ϵ)
-    Au = Asvd[:U][:, bigev]
-    Ad = diagm(Asvd[:S][bigev])
-    Av = Asvd[:V][:, bigev]
+    Asvd = svd!(A)
+    bigev = findall(Asvd.S .> ϵ)
+    Au = Asvd.U[:, bigev]
+    Ad = diagm(Asvd.S[bigev])
+    Av = Asvd.V[:, bigev]
     return bigev, Au, Ad, Av
 end
